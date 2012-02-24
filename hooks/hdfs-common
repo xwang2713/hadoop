@@ -1,8 +1,6 @@
-#!/bin/bash -x
+#!/bin/bash
 
 set -e
-
-base_packages="dotdee"
 
 configure_hosts () {
     private_address=`unit-get private-address`
@@ -29,8 +27,8 @@ configure_sources () {
 }
 
 install_base_packages () {
-    juju-log "Installing hadoop namenode..."
-    apt-get install -y hadoop $base_packages
+    juju-log "Installing hadoop base..."
+    apt-get install -y hadoop dotdee
 }
 
 config_element () {
@@ -57,9 +55,6 @@ open_ports () {
         datanode)
             open-port 50075 # Web interface for datanode
             ;;
-        *)
-            juju-log "Unknown role"
-            ;;
     esac
 }
 
@@ -80,16 +75,12 @@ configure_hadoop () {
     # Configure HDFS
     dir=`dotdee --dir /etc/hadoop/conf.juju/hdfs-site.xml`
     config_basic $dir
-    config_element "dfs.permissions" "false" > \
-        $dir/10-dfs.permissions
-    config_element "dfs.replication" "2" > \
-        $dir/11-dfs.replication
-    config_element "dfs.safemode.extension" "0" > \
-        $dir/12-dfs.safemode.extension
-    config_element "dfs.safemode.min.datanodes" "3" > \
-        $dir/13-dfs.safemode.min.datanodes
     config_element "dfs.name.dir" "/var/lib/hadoop/cache/hadoop/dfs/name" > \
-        $dir/14-dfs.name.dir
+        $dir/10-dfs.name.dir
+    config_element "dfs.namenode.handler.count" "`config-get dfs.namenode.handler.count`" > \
+        $dir/11-dfs.namenode.handler.count
+    config_element "dfs.block.size" "`config-get dfs.block.size`" > \
+        $dir/12-dfs.block.size
     if [ "$hbase" = "True" ]
     then
         # Turn on append support for HBase
@@ -106,6 +97,8 @@ configure_hadoop () {
     config_basic $dir
     config_element "hadoop.tmp.dir" "/var/lib/hadoop/cache/\${user.name}" > \
         $dir/11-hadoop.tmp.dir
+    config_element "io.file.buffer.size" "`config-get io.file.buffer.size`" > \
+        $dir/12-io.file.buffer.size
     dotdee --update /etc/hadoop/conf.juju/core-site.xml || true
 }
 
@@ -123,11 +116,7 @@ configure_role () {
             config_element "fs.default.name" "hdfs://$private_address:8020" > \
                 $dir/10-fs.default.name
             ;;
-        *)  
-            juju-log "Unsupported role..."
-            ;;
     esac
-    
     dotdee --update /etc/hadoop/conf.juju/core-site.xml || true
 }
 
@@ -210,7 +199,7 @@ case $COMMAND in
                 ;;
         esac
         ;;
-    datanode-relation-*)
+    datanode-relation-joined)
         case $role in
             unconfigured) 
                 juju-log "Configuring this unit as a datanode"

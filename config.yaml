@@ -22,3 +22,25 @@ options:
       Setting this configuration parameter to 'true' configures HDFS for
       use with HBase including turning on 'append' mode which is not
       desirable in all deployment scenarios.
+# Expert options See http://wiki.apache.org/hadoop/FAQ#How_well_does_Hadoop_scale.3F 
+# for more details
+  dfs.namenode.handler.count:
+    type: int
+    default: 10
+    description: |
+      The number of server threads for the namenode.  Increase this in larger
+      deployements to ensure the namenode can cope with the number of datanodes
+      that it has to deal with.
+  dfs.block.size:
+    type: int
+    default: 67108864
+    description: |
+      The default block size for new files.  Increase this in larger deployments
+      for better large data set performance.
+  io.file.buffer.size:
+    type: int
+    default: 4096
+    description: |
+      The size of buffer for use in sequence files. The size of this buffer should
+      probably be a multiple of hardware page size (4096 on Intel x86), and it
+      determines how much data is buffered during read and write operations.
