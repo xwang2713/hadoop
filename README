@@ -1,0 +1,61 @@
+Overview
+--------
+
+Hadoop Distributed File System (HDFS™) is the primary storage system
+used by Hadoop applications. HDFS creates multiple replicas of data 
+blocks and distributes them on compute nodes throughout a cluster to 
+enable reliable, extremely rapid computations. 
+
+Usage
+-----
+
+This charm supports both the namenode (master) and datanode (slave) 
+hdfs roles:
+
+    juju deploy --repository . local:hadoop-hdfs hdfs-master
+    juju deploy --repository . local:hadoop-hdfs hdfs-slavecluster-01
+    juju add-unit -n 2 hdfs-slavecluster-01
+    juju add-relation hdfs-master:namenode hdfs-slavecluster-01:datanode
+
+Note that adding and removing the relation between master and slave
+is destructive!  The role of the service is determined at the point that
+the relation is added (it must be qualified) and CANNOT be changed later!
+
+A single hdfs-master can support multiple slave service deployments:
+
+    juju deploy --repository . local:hadoop-hdfs hdfs-slavecluster-01
+    juju add-unit -n 2 hdfs-slavecluster-02
+    juju add-relation hdfs-master:namenode hdfs-slavecluster-02:datanode
+
+This could potentially be used to perform charm upgrades on datanodes in 
+sets:
+
+    juju upgrade-charm --repository . hdfs-slavecluster-01
+    (go and make some tea whilst monitoring juju debug-log)
+    juju upgrade-charm --repository . hdfs-slavecluster-02
+
+Could be helpful to avoid outages (to be proven).
+
+Use with HBase
+--------------
+
+This charm also supports deployment of HBase; HBase requires that append mode
+is enabled in DFS - this can be set by providing a config.yaml file:
+
+    hdfs-master:
+        hbase: true
+    hdfs-slavecluster-01:
+        hbase: true
+    hdfs-slavecluster-02:
+        hbase: true
+
+Its really important to ensure that both the master and the slave services have
+the same configuration in this deployment scenario.
+
+You can then associate a hdfs service deployment with a hbase service deployment:
+
+    juju add-relation hdfs-namenode:namenode hbase-master:namenode
+    juju add-relation hdfs-namenode:namenode hbase-regioncluster-01:namenode
+    juju add-relation hdfs-namenode:namenode hbase-regioncluster-02:namenode
+
+See the hbase charm for more details on deploying HBase.
