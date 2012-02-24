@@ -22,6 +22,12 @@ options:
       Setting this configuration parameter to 'true' configures HDFS for
       use with HBase including turning on 'append' mode which is not
       desirable in all deployment scenarios.
+  webhdfs:
+    type: string
+    default: false
+    description: |
+      Hadoop includes a RESTful API over HTTP to HDFS.  Setting this flag
+      to true enables this part of the HDFS service.
 # Expert options See http://wiki.apache.org/hadoop/FAQ#How_well_does_Hadoop_scale.3F 
 # for more details
   dfs.namenode.handler.count:

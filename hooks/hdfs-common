@@ -91,6 +91,13 @@ configure_hadoop () {
     else
         rm -f $dir/15-dfs.support.append $dir/16-dfs.datanode.max.xcievers
     fi
+    if [ "`config-get webhdfs`" = "True" ]
+    then
+        config_element "dfs.webhdfs.enabled" "true" > \
+            $dir/20-dfs.webhdfs.enabled 
+    else
+        rm -f $dir/20-dfs.webhdfs.enabled
+    fi
     dotdee --update /etc/hadoop/conf.juju/hdfs-site.xml || true
     # Configure Hadoop Core
     dir=`dotdee --dir /etc/hadoop/conf.juju/core-site.xml`
