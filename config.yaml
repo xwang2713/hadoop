@@ -29,7 +29,7 @@ options:
     default: 10
     description: |
       The number of server threads for the namenode.  Increase this in larger
-      deployements to ensure the namenode can cope with the number of datanodes
+      deployments to ensure the namenode can cope with the number of datanodes
       that it has to deal with.
   dfs.block.size:
     type: int
