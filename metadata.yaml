@@ -7,9 +7,6 @@ description: |
   HDFS creates multiple replicas of data blocks and distributes them on
   compute nodes throughout a cluster to enable reliable, extremely
   rapid computations.
-  .
-  The Hadoop Distributed Filesystem (HDFS) requires one unique server, the
-  namenode, which manages the block locations of files on the filesystem.
 provides:
   namenode:
     interface: dfs
