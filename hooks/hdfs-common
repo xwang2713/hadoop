@@ -135,6 +135,9 @@ configure_role () {
             namenode_address=`relation-get private-address`
             config_element "dfs.http.address" "$namenode_address:50070" > \
                 $dir/50-dfs.http.address
+            private_address=`unit-get private-address`
+            config_element "dfs.secondary.http.address" "$private_address:50090" > \
+                $dir/51-dfs.secondary.http.address
             ;;
     esac
     dotdee --update /etc/hadoop/conf.juju/hdfs-site.xml || true
