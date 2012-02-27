@@ -9,15 +9,17 @@ enable reliable, extremely rapid computations.
 Usage
 -----
 
-This charm supports both the namenode (master) and datanode (slave) 
+This charm supports the namenode, secondarynamenode and datanode
 hdfs roles:
 
     juju deploy --repository . local:hadoop-hdfs hdfs-namenode
+    juju deploy --repository . local:hadoop-hdfs hdfs-secondarynamenode
     juju deploy --repository . local:hadoop-hdfs hdfs-datacluster-01
     juju add-unit -n 2 hdfs-datacluster-01
     juju add-relation hdfs-namenode:namenode hdfs-datacluster-01:datanode
+    juju add-relation hdfs-namenode:namenode hdfs-secondarynamenode:secondarynamenode
 
-Note that adding and removing the relation between master and slave
+Note that adding and removing the relation between namenode and datanode
 is destructive!  The role of the service is determined at the point that
 the relation is added (it must be qualified) and CANNOT be changed later!
 

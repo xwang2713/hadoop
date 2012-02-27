@@ -41,8 +41,8 @@ options:
     type: int
     default: 67108864
     description: |
-      The default block size for new files.  Increase this in larger deployments
-      for better large data set performance.
+      The default block size for new files (default to 64MB).  Increase this in 
+      larger deployments for better large data set performance.
   io.file.buffer.size:
     type: int
     default: 4096
@@ -54,4 +54,8 @@ options:
     type: int
     default: 4096
     description: |
-      The number of...
+      The number of files that an datanode will serve at any one time.
+      .
+      An Hadoop HDFS datanode has an upper bound on the number of files that it
+      will serve at any one time. This defaults to 256 (which is low) in hadoop
+      1.x - however this charm increases that to 4096.
