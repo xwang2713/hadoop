@@ -16,3 +16,5 @@ provides:
 requires:
   datanode:
     interface: dfs
+  secondarynamenode:
+    interface: dfs

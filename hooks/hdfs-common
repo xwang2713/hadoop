@@ -49,19 +49,22 @@ config_basic () {
 open_ports () {
     case $1 in
         namenode)
-            open-port 8020 # DFS Nameserver
-            open-port 50070 # DFS Web UI
+            open-port 8020
+            open-port 50070 
             ;;
         datanode)
-            open-port 50075 # Web interface for datanode
+            open-port 50010
+            open-port 50020
+            open-port 50075
+            ;;
+        secondarynamenode)
+            open-port 50090
             ;;
     esac
 }
 
 configure_hadoop () {
-    hbase=`config-get hbase`
-    # Copy distribution configuration and then 
-    # specialize
+    # Copy distribution configuration and then specialize
     if [ ! -d /etc/hadoop/conf.juju ]
     then
         cp -r /etc/hadoop/conf.empty /etc/hadoop/conf.juju
@@ -75,37 +78,38 @@ configure_hadoop () {
     # Configure HDFS
     dir=`dotdee --dir /etc/hadoop/conf.juju/hdfs-site.xml`
     config_basic $dir
-    config_element "dfs.name.dir" "/var/lib/hadoop/cache/hadoop/dfs/name" > \
+    # Purge existing configuration
+    rm -f $dir/1*-dfs.*
+    config_element "dfs.name.dir" \
+        "/var/lib/hadoop/cache/hadoop/dfs/name" > \
         $dir/10-dfs.name.dir
-    config_element "dfs.namenode.handler.count" "`config-get dfs.namenode.handler.count`" > \
+    config_element "dfs.namenode.handler.count" \
+        "`config-get dfs.namenode.handler.count`" > \
         $dir/11-dfs.namenode.handler.count
-    config_element "dfs.block.size" "`config-get dfs.block.size`" > \
+    config_element "dfs.block.size" i\
+        "`config-get dfs.block.size`" > \
         $dir/12-dfs.block.size
-    if [ "$hbase" = "True" ]
-    then
-        # Turn on append support for HBase
+    config_element "dfs.datanode.max.xcievers" \
+        "`config-get dfs.datanode.max.xcievers`" > \
+        $dir/13-dfs.datanode.max.xcievers
+    [ "`config-get hbase`" = "True" ] && \
         config_element "dfs.support.append" "true" > \
-            $dir/15-dfs.support.append
-        config_element "dfs.datanode.max.xcievers" "4096" > \
-            $dir/16-dfs.datanode.max.xcievers
-    else
-        rm -f $dir/15-dfs.support.append $dir/16-dfs.datanode.max.xcievers
-    fi
-    if [ "`config-get webhdfs`" = "True" ]
-    then
+            $dir/14-dfs.support.append || :
+    [ "`config-get webhdfs`" = "True" ] && \
         config_element "dfs.webhdfs.enabled" "true" > \
-            $dir/20-dfs.webhdfs.enabled 
-    else
-        rm -f $dir/20-dfs.webhdfs.enabled
-    fi
+            $dir/15-dfs.webhdfs.enabled || :
+    # TODO - secure this hadoop installation!
+    config_element "dfs.permissions" "false" > \
+            $dir/16-dfs.permissions
     dotdee --update /etc/hadoop/conf.juju/hdfs-site.xml || true
     # Configure Hadoop Core
     dir=`dotdee --dir /etc/hadoop/conf.juju/core-site.xml`
     config_basic $dir
+    rm -f $dir/1*-*
     config_element "hadoop.tmp.dir" "/var/lib/hadoop/cache/\${user.name}" > \
-        $dir/11-hadoop.tmp.dir
+        $dir/10-hadoop.tmp.dir
     config_element "io.file.buffer.size" "`config-get io.file.buffer.size`" > \
-        $dir/12-io.file.buffer.size
+        $dir/11-io.file.buffer.size
     dotdee --update /etc/hadoop/conf.juju/core-site.xml || true
 }
 
@@ -113,28 +117,37 @@ configure_role () {
     dir=`dotdee --dir /etc/hadoop/conf.juju/core-site.xml`
     juju-log "Configuring service unit as $1..."
     case $1 in
-        datanode)
+        datanode|secondarynamenode)
             namenode_address=`relation-get private-address`
             config_element "fs.default.name" "hdfs://$namenode_address:8020" > \
-                $dir/10-fs.default.name
+                $dir/50-fs.default.name
             ;;
         namenode)
             private_address=`unit-get private-address`
             config_element "fs.default.name" "hdfs://$private_address:8020" > \
-                $dir/10-fs.default.name
+                $dir/50-fs.default.name
             ;;
     esac
     dotdee --update /etc/hadoop/conf.juju/core-site.xml || true
+    dir=`dotdee --dir /etc/hadoop/conf.juju/hdfs-site.xml`
+    case $1 in
+        secondarynamenode)
+            namenode_address=`relation-get private-address`
+            config_element "dfs.http.address" "$namenode_address:50070" > \
+                $dir/50-dfs.http.address
+            ;;
+    esac
+    dotdee --update /etc/hadoop/conf.juju/hdfs-site.xml || true
 }
 
 install_packages () {
-    juju-log "Installing extra packages for $1"
     case $1 in
-        namenode)        
-            apt-get -y install hadoop-namenode
+        namenode|datanode|secondarynamenode) 
+            juju-log "Installing extra packages for $1"
+            apt-get -y install hadoop-$1
             ;;
-        datanode)
-            apt-get -y install hadoop-datanode
+        *)
+            juju-log "Unsupported role $1..."
             ;;
     esac
 }
@@ -165,8 +178,12 @@ stop_hadoop () { _stop_ hadoop-$1; }
 # Determines what type of node this is
 resolve_role () {
     role="unconfigured"
-    [ -d /usr/share/doc/hadoop-namenode ] && role="namenode" || :
-    [ -d /usr/share/doc/hadoop-datanode ] && role="datanode" || :
+    [ -d /usr/share/doc/hadoop-namenode ] && \
+        role="namenode" || :
+    [ -d /usr/share/doc/hadoop-secondarynamenode ] && \
+        role="secondarynamenode" || :
+    [ -d /usr/share/doc/hadoop-datanode ] && \
+        role="datanode" || :
     echo "$role"
 }
 role=`resolve_role`
@@ -198,10 +215,35 @@ case $COMMAND in
             namenode)
                 juju-log "Already configured as namenode"
                 # Unit should only ever assume this role once so no
-                # further action is required
+                # further action is required - this prevents adding
+                # an additional unit to the namenode master breaking
+                # things.
                 ;;
             *)
-                juju-log "Already configured as another personality"
+                juju-log "Already configured as another role: $role"
+                exit 1
+                ;;
+        esac
+        ;;
+    secondarynamenode-relation-joined)
+        case $role in
+            unconfigured)
+                juju-log "Configuring this unit as a secondarynamenode"
+                role="secondarynamenode"
+                install_packages $role
+                configure_role $role
+                restart_hadoop $role
+                open_ports $role
+                ;;
+            secondarynamenode)
+                juju-log "Already configured as secondarynamenode"
+                # Unit should only ever assume this role once so no
+                # further action is required - this prevents adding
+                # an additional unit to the namenode master breaking
+                # things.
+                ;;
+            *)
+                juju-log "Already configured as another role: $role"
                 exit 1
                 ;;
         esac
@@ -219,10 +261,12 @@ case $COMMAND in
             datanode)
                 juju-log "Already configured as datanode"
                 # Unit should only ever assume this role once so no
-                # further action is required
+                # further action is required - this prevents adding
+                # an additional unit to the namenode master breaking
+                # things.
                 ;;
             *)
-                juju-log "Already configured as another personality"
+                juju-log "Already configured as another role: $role"
                 exit 1
                 ;;
         esac
