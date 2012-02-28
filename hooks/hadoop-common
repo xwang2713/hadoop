@@ -294,6 +294,10 @@ case $COMMAND in
                 restart_hadoop
                 open_ports
                 install_job
+                # Some hadoop processes take a bit of time to start
+                # we need to let them get to a point where they are
+                # ready to accept connections
+                sleep 5 && relation-set ready="true"
                 ;;
             jobtracker)
                 juju-log "Already configured as $mapred_role"
@@ -301,6 +305,7 @@ case $COMMAND in
                 # further action is required - this prevents adding
                 # an additional unit to the namenode master breaking
                 # things.
+                relation-set ready="true"
                 ;;
             *)
                 juju-log "Already configured as another role: $mapred_role"
@@ -308,15 +313,21 @@ case $COMMAND in
                 ;;
         esac
         ;;
-    tasktracker-relation-joined)
+    tasktracker-relation-changed)
         case $mapred_role in
             unconfigured)
-                juju-log "Configuring this unit as a tasktracker"
-                mapred_role="tasktracker"
-                install_packages $mapred_role
-                configure_role_relation $mapred_role
-                restart_hadoop
-                open_ports
+                ready=`relation-get ready`
+                if [ -z "$ready" ]
+                then
+                    juju-log "JobTracker not yet ready..."
+                    exit 0
+                else
+                    juju-log "Configuring this unit as a tasktracker"
+                    mapred_role="tasktracker"
+                    configure_role_relation $mapred_role
+                    install_packages $mapred_role
+                    open_ports
+                fi
                 ;;
             tasktracker)
                 juju-log "Already configured as $mapred_role"
@@ -331,23 +342,34 @@ case $COMMAND in
                 ;;
         esac
         ;;
-    mapred-namenode-relation-joined)
+    mapred-namenode-relation-changed)
         # A bit different to the others as this relation does not
         # give the unit a role - it just configures the DFS root
-        configure_role_relation mapred-namenode
-        restart_hadoop
+        ready=`relation-get ready`
+        if [ -z "$ready" ]
+        then
+            juju-log "Namenode not yet ready"
+            exit 0
+        else
+            configure_role_relation mapred-namenode
+            restart_hadoop
+        fi
         ;;
     namenode-relation-joined)
         case $hdfs_role in
             unconfigured)             
                 juju-log "Configuring this unit as a namenode"
                 hdfs_role="namenode"
-                install_packages $hdfs_role
                 configure_role_relation $hdfs_role
+                install_packages $hdfs_role
                 stop_hadoop
                 format_namenode
                 restart_hadoop
                 open_ports
+                # Some hadoop processes take a bit of time to start
+                # we need to let them get to a point where they are
+                # ready to accept connections
+                sleep 5 && relation-set ready="true"
                 ;;
             namenode)
                 juju-log "Already configured as namenode"
@@ -355,6 +377,7 @@ case $COMMAND in
                 # further action is required - this prevents adding
                 # an additional unit to the namenode master breaking
                 # things.
+                relation-set ready="true"
                 ;;
             *)
                 juju-log "Already configured as another role: $hdfs_role"
@@ -362,15 +385,21 @@ case $COMMAND in
                 ;;
         esac
         ;;
-    secondarynamenode-relation-joined)
+    secondarynamenode-relation-changed)
         case $hdfs_role in
             unconfigured)
-                juju-log "Configuring this unit as a secondarynamenode"
-                hdfs_role="secondarynamenode"
-                install_packages $hdfs_role
-                configure_role_relation $hdfs_role
-                restart_hadoop
-                open_ports
+                ready=`relation-get ready`
+                if [ -z "$ready" ]
+                then
+                    juju-log "Namenode not yet ready"
+                    exit 0
+                else
+                    juju-log "Configuring this unit as a secondarynamenode"
+                    hdfs_role="secondarynamenode"
+                    configure_role_relation $hdfs_role
+                    install_packages $hdfs_role
+                    open_ports
+                fi
                 ;;
             secondarynamenode)
                 juju-log "Already configured as secondarynamenode"
@@ -385,15 +414,21 @@ case $COMMAND in
                 ;;
         esac
         ;;
-    datanode-relation-joined)
+   datanode-relation-changed)
         case $hdfs_role in
             unconfigured) 
-                juju-log "Configuring this unit as a datanode"
-                hdfs_role="datanode"
-                install_packages $hdfs_role
-                configure_role_relation $hdfs_role
-                restart_hadoop
-                open_ports
+                ready=`relation-get ready`
+                if [ -z "$ready" ]
+                then
+                    juju-log "Namenode not yet ready"
+                    exit 0
+                else
+                    juju-log "Configuring this unit as a datanode"
+                    hdfs_role="datanode"
+                    configure_role_relation $hdfs_role
+                    install_packages $hdfs_role
+                    open_ports
+                fi
                 ;;
             datanode)
                 juju-log "Already configured as datanode"
@@ -408,7 +443,7 @@ case $COMMAND in
                 ;;
         esac
         ;;
-    upgrade-charm)
+    upgrade-charm|config-changed)
         configure_hadoop
         restart_hadoop
         open_ports
