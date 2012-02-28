@@ -47,7 +47,7 @@ config_basic () {
 }
 
 open_ports () {
-    case $1 in
+    case $hdfs_role in
         namenode)
             open-port 8020
             open-port 50070 
@@ -61,8 +61,24 @@ open_ports () {
             open-port 50090
             ;;
     esac
+    case $mapred_role in
+        jobtracker)
+            open-port 8021
+            open-port 50030
+            ;;
+        tasktracker)
+            open-port 50060
+            ;;
+    esac
 }
 
+MAPRED_CONFIG="mapred.reduce.parallel.copies
+mapred.child.java.opts
+io.sort.factor
+io.sort.mb
+mapred.job.tracker.handler.count
+tasktracker.http.threads
+"
 configure_hadoop () {
     # Copy distribution configuration and then specialize
     if [ ! -d /etc/hadoop/conf.juju ]
@@ -72,9 +88,17 @@ configure_hadoop () {
             /etc/hadoop/conf.juju 50
         cp /dev/null /etc/hadoop/conf.juju/hdfs-site.xml
         cp /dev/null /etc/hadoop/conf.juju/core-site.xml
+        cp /dev/null /etc/hadoop/conf.juju/mapred-site.xml
         dotdee --setup /etc/hadoop/conf.juju/hdfs-site.xml 
-        dotdee --setup /etc/hadoop/conf.juju/core-site.xml 
+        dotdee --setup /etc/hadoop/conf.juju/core-site.xml
+        dotdee --setup /etc/hadoop/conf.juju/mapred-site.xml 
+        dotdee --setup /etc/hadoop/conf.juju/hadoop-env.sh
     fi
+    # Configure Heap Size
+    dir=`dotdee --dir /etc/hadoop/conf.juju/hadoop-env.sh`
+    echo "export HADOOP_HEAPSIZE=`config-get heap`" > \
+        $dir/60-heapsize
+    dotdee --update /etc/hadoop/conf.juju/hadoop-env.sh || true
     # Configure HDFS
     dir=`dotdee --dir /etc/hadoop/conf.juju/hdfs-site.xml`
     config_basic $dir
@@ -102,6 +126,18 @@ configure_hadoop () {
     config_element "dfs.permissions" "false" > \
             $dir/16-dfs.permissions
     dotdee --update /etc/hadoop/conf.juju/hdfs-site.xml || true
+    # Configure Map Reduce
+    dir=`dotdee --dir /etc/hadoop/conf.juju/mapred-site.xml`
+    config_basic $dir
+    rm -f $dir/20-*-*
+    counter=10
+    for element in $MAPRED_CONFIG
+    do
+        config_element "$element" "`config-get $element`" > \
+            $dir/20-$counter-$element
+        counter=`expr $counter + 1`
+    done
+    dotdee --update /etc/hadoop/conf.juju/mapred-site.xml || true
     # Configure Hadoop Core
     dir=`dotdee --dir /etc/hadoop/conf.juju/core-site.xml`
     config_basic $dir
@@ -113,11 +149,11 @@ configure_hadoop () {
     dotdee --update /etc/hadoop/conf.juju/core-site.xml || true
 }
 
-configure_role () {
+configure_role_relation () {
     dir=`dotdee --dir /etc/hadoop/conf.juju/core-site.xml`
-    juju-log "Configuring service unit as $1..."
+    juju-log "Configuring service unit relation $1..."
     case $1 in
-        datanode|secondarynamenode)
+        datanode|secondarynamenode|mapred-namenode)
             namenode_address=`relation-get private-address`
             config_element "fs.default.name" "hdfs://$namenode_address:8020" > \
                 $dir/50-fs.default.name
@@ -141,11 +177,25 @@ configure_role () {
             ;;
     esac
     dotdee --update /etc/hadoop/conf.juju/hdfs-site.xml || true
+    dir=`dotdee --dir /etc/hadoop/conf.juju/mapred-site.xml`
+    case $1 in
+        tasktracker)
+            jobtracker_address=`relation-get private-address`
+            config_element "mapred.job.tracker" "$jobtracker_address:8021" > \
+                $dir/50-mapred.job.tracker
+            ;;
+        jobtracker)
+            jobtracker_address=`unit-get private-address`
+            config_element "mapred.job.tracker" "$jobtracker_address:8021" > \
+                $dir/50-mapred.job.tracker
+            ;;
+    esac
+    dotdee --update /etc/hadoop/conf.juju/mapred-site.xml || true
 }
 
 install_packages () {
     case $1 in
-        namenode|datanode|secondarynamenode) 
+        namenode|datanode|secondarynamenode|jobtracker|tasktracker) 
             juju-log "Installing extra packages for $1"
             apt-get -y install hadoop-$1
             ;;
@@ -175,11 +225,28 @@ _stop_ () {
 }
 
 # Hadoop Service Control Commands
-restart_hadoop () { _restart_ hadoop-$1; }
-stop_hadoop () { _stop_ hadoop-$1; }
+restart_hadoop () { 
+    [ "$hdfs_role" != "unconfigured" ] && \
+        _restart_ hadoop-$hdfs_role || :
+    [ "$mapred_role" != "unconfigured" ] && \
+        _restart_ hadoop-$mapred_role || :
+}
+stop_hadoop () { 
+    [ "$hdfs_role" != "unconfigured" ] && \
+        _stop_ hadoop-$hdfs_role || :
+    [ "$mapred_role" != "unconfigured" ] && \
+        _stop_ hadoop-$mapred_role || :
+}
+stop_hadoop () { 
+    [ "$hdfs_role" != "unconfigured" ] && \
+        _start_ hadoop-$hdfs_role || :
+    [ "$mapred_role" != "unconfigured" ] && \
+        _start_ hadoop-$mapred_role || :
+}
+
 
 # Determines what type of node this is
-resolve_role () {
+resolve_hdfs_role () {
     role="unconfigured"
     [ -d /usr/share/doc/hadoop-namenode ] && \
         role="namenode" || :
@@ -189,7 +256,17 @@ resolve_role () {
         role="datanode" || :
     echo "$role"
 }
-role=`resolve_role`
+resolve_mapred_role () {
+    role="unconfigured"
+    [ -d /usr/share/doc/hadoop-jobtracker ] && \
+        role="jobtracker" || :
+    [ -d /usr/share/doc/hadoop-tasktracker ] && \
+        role="tasktracker" || :
+    echo "$role"
+}
+
+hdfs_role=`resolve_hdfs_role`
+mapred_role=`resolve_mapred_role`
 
 COMMAND=`basename $0`
 
@@ -200,20 +277,69 @@ case $COMMAND in
         install_base_packages
         configure_hadoop
         ;;
-    start|stop)
-        # No-op
+    jobtracker-relation-joined)
+        case $mapred_role in
+            unconfigured)
+                juju-log "Configuring this unit as a jobtracker"
+                mapred_role="jobtracker"
+                install_packages $mapred_role
+                configure_role_relation $mapred_role
+                restart_hadoop
+                open_ports
+                ;;
+            jobtracker)
+                juju-log "Already configured as $mapred_role"
+                # Unit should only ever assume this role once so no
+                # further action is required - this prevents adding
+                # an additional unit to the namenode master breaking
+                # things.
+                ;;
+            *)
+                juju-log "Already configured as another role: $mapred_role"
+                exit 1
+                ;;
+        esac
+        ;;
+    tasktracker-relation-joined)
+        case $mapred_role in
+            unconfigured)
+                juju-log "Configuring this unit as a tasktracker"
+                mapred_role="tasktracker"
+                install_packages $mapred_role
+                configure_role_relation $mapred_role
+                restart_hadoop
+                open_ports
+                ;;
+            tasktracker)
+                juju-log "Already configured as $mapred_role"
+                # Unit should only ever assume this role once so no
+                # further action is required - this prevents adding
+                # an additional unit to the namenode master breaking
+                # things.
+                ;;
+            *)
+                juju-log "Already configured as another role: $mapred_role"
+                exit 1
+                ;;
+        esac
+        ;;
+    mapred-namenode-relation-joined)
+        # A bit different to the others as this relation does not
+        # give the unit a role - it just configures the DFS root
+        configure_role_relation mapred-namenode
+        restart_hadoop
         ;;
     namenode-relation-joined)
-        case $role in
+        case $hdfs_role in
             unconfigured)             
                 juju-log "Configuring this unit as a namenode"
-                role="namenode"
-                install_packages $role
-                configure_role $role
-                stop_hadoop $role
+                hdfs_role="namenode"
+                install_packages $hdfs_role
+                configure_role_relation $hdfs_role
+                stop_hadoop
                 format_namenode
-                restart_hadoop $role
-                open_ports $role
+                restart_hadoop
+                open_ports
                 ;;
             namenode)
                 juju-log "Already configured as namenode"
@@ -223,20 +349,20 @@ case $COMMAND in
                 # things.
                 ;;
             *)
-                juju-log "Already configured as another role: $role"
+                juju-log "Already configured as another role: $hdfs_role"
                 exit 1
                 ;;
         esac
         ;;
     secondarynamenode-relation-joined)
-        case $role in
+        case $hdfs_role in
             unconfigured)
                 juju-log "Configuring this unit as a secondarynamenode"
-                role="secondarynamenode"
-                install_packages $role
-                configure_role $role
-                restart_hadoop $role
-                open_ports $role
+                hdfs_role="secondarynamenode"
+                install_packages $hdfs_role
+                configure_role_relation $hdfs_role
+                restart_hadoop
+                open_ports
                 ;;
             secondarynamenode)
                 juju-log "Already configured as secondarynamenode"
@@ -246,20 +372,20 @@ case $COMMAND in
                 # things.
                 ;;
             *)
-                juju-log "Already configured as another role: $role"
+                juju-log "Already configured as another role: $hdfs_role"
                 exit 1
                 ;;
         esac
         ;;
     datanode-relation-joined)
-        case $role in
+        case $hdfs_role in
             unconfigured) 
                 juju-log "Configuring this unit as a datanode"
-                role="datanode"
-                install_packages $role
-                configure_role $role
-                restart_hadoop $role
-                open_ports $role
+                hdfs_role="datanode"
+                install_packages $hdfs_role
+                configure_role_relation $hdfs_role
+                restart_hadoop
+                open_ports
                 ;;
             datanode)
                 juju-log "Already configured as datanode"
@@ -269,15 +395,15 @@ case $COMMAND in
                 # things.
                 ;;
             *)
-                juju-log "Already configured as another role: $role"
+                juju-log "Already configured as another role: $hdfs_role"
                 exit 1
                 ;;
         esac
         ;;
     upgrade-charm)
         configure_hadoop
-        restart_hadoop $role
-        open_ports $role
+        restart_hadoop
+        open_ports
         ;;
     *)
         juju-log "Command not recognised"

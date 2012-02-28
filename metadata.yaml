@@ -1,17 +1,36 @@
-name: hadoop-hdfs
+name: hadoop
 summary: Software platform for processing vast amounts of data
 description: |
-  Hadoop Distributed File System (HDFS™) is the primary storage system
-  used by Hadoop applications.
+  Hadoop is a software platform that lets one easily write and
+  run applications that process vast amounts of data.
   .
-  HDFS creates multiple replicas of data blocks and distributes them on
-  compute nodes throughout a cluster to enable reliable, extremely
-  rapid computations.
+  Here's what makes Hadoop especially useful:
+  * Scalable: Hadoop can reliably store and process petabytes.
+  * Economical: It distributes the data and processing across clusters
+    of commonly available computers. These clusters can number
+    into the thousands of nodes.
+  * Efficient: By distributing the data, Hadoop can process it in parallel
+    on the nodes where the data is located. This makes it
+    extremely rapid.
+  * Reliable: Hadoop automatically maintains multiple copies of data and
+    automatically redeploys computing tasks based on failures.
+  .
+  Hadoop implements MapReduce, using the Hadoop Distributed File System (HDFS).
+  MapReduce divides applications into many small blocks of work. HDFS creates
+  multiple replicas of data blocks for reliability, placing them on compute
+  nodes around the cluster. MapReduce can then process the data where it is
+  located.
 provides:
   namenode:
     interface: dfs
+  jobtracker:
+    interface: mapred
 requires:
   datanode:
     interface: dfs
   secondarynamenode:
+    interface: dfs
+  tasktracker:
+    interface: mapred
+  mapred-namenode:
     interface: dfs

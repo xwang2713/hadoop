@@ -28,6 +28,31 @@ options:
     description: |
       Hadoop includes a RESTful API over HTTP to HDFS.  Setting this flag
       to true enables this part of the HDFS service.
+  heap:
+    type: int
+    default: 1024
+    description: |
+      The maximum heap size in MB to allocate for daemons processes within the
+      service units managed by this charm.
+      .
+      The recommended configurations vary based on role and the amount of
+      raw disk storage available in the hadoop cluster:
+      .
+       * NameNode: 1GB of heap for every 100TB of raw data stored.
+       * SecondaryNameNode: Must be paired with the NameNode.
+       * JobTracker: 2GB.
+       * DataNode: 1GB.
+       * TaskTracker: 1GB.
+      .
+      The above recommendations are taken from HBase: The Definitive Guide by
+      Lars George.
+      .
+      Obviously you need to ensure that the servers supporting each service unit
+      have sufficient memory to accomodate this setting - it should be no more
+      than 75% of the total memory in the system excluding swap.
+      .
+      If you are also mixing MapReduce and DFS roles on the same units you need to
+      take this into account as well (see README for more details).
 # Expert options See http://wiki.apache.org/hadoop/FAQ#How_well_does_Hadoop_scale.3F 
 # for more details
   dfs.namenode.handler.count:
@@ -59,3 +84,48 @@ options:
       An Hadoop HDFS datanode has an upper bound on the number of files that it
       will serve at any one time. This defaults to 256 (which is low) in hadoop
       1.x - however this charm increases that to 4096.
+  mapred.reduce.parallel.copies:
+    type: int
+    default: 5
+    description: |
+      The default number of parallel transfers run by reduce during the
+      copy(shuffle) phase.
+  mapred.child.java.opts:
+    type: string
+    default: -Xmx200m
+    description: |
+      Java opts for the task tracker child processes. The following symbol,
+      if present, will be interpolated: @taskid@ is replaced by current TaskID.
+      Any other occurrences of '@' will go unchanged. For example, to enable
+      verbose gc logging to a file named for the taskid in /tmp and to set
+      the heap maximum to be a gigabyte, pass a 'value' of:
+      .
+        -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+      .
+      The configuration variable mapred.child.ulimit can be used to control
+      the maximum virtual memory of the child processes.
+  io.sort.factor:
+    type: int
+    default: 10
+    description: |
+      The number of streams to merge at once while sorting files. This
+      determines the number of open file handles.
+  io.sort.mb:
+    type: int
+    default: 100
+    description: |
+      The total amount of buffer memory to use while sorting files, in
+      megabytes. By default, gives each merge stream 1MB, which should minimize
+      seeks.
+  mapred.job.tracker.handler.count:
+    type: int
+    default: 10
+    description: |
+      The number of server threads for the JobTracker. This should be roughly
+      4% of the number of tasktracker nodes.
+  tasktracker.http.threads:
+    type: int
+    default: 40
+    description: |
+      The number of worker threads that for the http server. This is used for
+      map output fetching.
