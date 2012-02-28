@@ -25,6 +25,8 @@ provides:
     interface: dfs
   jobtracker:
     interface: mapred
+  ganglia:
+    interface: monitor
 requires:
   datanode:
     interface: dfs

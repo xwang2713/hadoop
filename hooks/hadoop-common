@@ -244,6 +244,13 @@ stop_hadoop () {
         _start_ hadoop-$mapred_role || :
 }
 
+install_job () {
+    HADOOP_HOME=/usr/lib/hadoop
+    juju-log "installing terasort script"
+    cp scripts/terasort.sh $HADOOP_HOME
+    chown hdfs.hdfs $HADOOP_HOME/terasort.sh
+    chmod 755 $HADOOP_HOME/terasort.sh
+}
 
 # Determines what type of node this is
 resolve_hdfs_role () {
@@ -340,6 +347,7 @@ case $COMMAND in
                 format_namenode
                 restart_hadoop
                 open_ports
+                install_job
                 ;;
             namenode)
                 juju-log "Already configured as namenode"
