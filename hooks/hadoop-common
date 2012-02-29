@@ -31,6 +31,12 @@ install_base_packages () {
     apt-get install -y hadoop dotdee
 }
 
+install_optional_packages () {
+    juju-log "Installing optional packages..."
+    pig=`config-get pig`
+    [ "$pig" = "True" ] && apt-get install -y pig || :
+}
+
 config_element () {
     key=$1
     value=$2
@@ -282,6 +288,7 @@ case $COMMAND in
         configure_hosts
         configure_sources
         install_base_packages
+        install_optional_packages
         configure_hadoop
         ;;
     jobtracker-relation-joined)
@@ -444,6 +451,7 @@ case $COMMAND in
         esac
         ;;
     upgrade-charm|config-changed)
+        install_optional_packages
         configure_hadoop
         restart_hadoop
         open_ports

@@ -28,6 +28,19 @@ options:
     description: |
       Hadoop includes a RESTful API over HTTP to HDFS.  Setting this flag
       to true enables this part of the HDFS service.
+  pig:
+    type: string
+    default: false
+    description: |
+      To install Apache Pig on all service units alongside Hadoop set this
+      configuration to 'true'.
+      .
+      Apache Pig is a platform for analyzing large data sets that consists
+      of a high-level language for expressing data analysis programs, coupled
+      with infrastructure for evaluating these programs. The salient property
+      of Pig programs is that their structure is amenable to substantial
+      parallelization, which in turns enables them to handle very large data
+      sets.
   heap:
     type: int
     default: 1024
