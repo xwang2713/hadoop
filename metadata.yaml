@@ -5,6 +5,7 @@ description: |
   run applications that process vast amounts of data.
   .
   Here's what makes Hadoop especially useful:
+  .
   * Scalable: Hadoop can reliably store and process petabytes.
   * Economical: It distributes the data and processing across clusters
     of commonly available computers. These clusters can number
