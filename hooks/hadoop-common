@@ -296,9 +296,8 @@ case $COMMAND in
             unconfigured)
                 juju-log "Configuring this unit as a jobtracker"
                 mapred_role="jobtracker"
-                install_packages $mapred_role
                 configure_role_relation $mapred_role
-                restart_hadoop
+                install_packages $mapred_role
                 open_ports
                 install_job
                 # Some hadoop processes take a bit of time to start
