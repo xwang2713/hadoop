@@ -217,17 +217,21 @@ format_namenode () {
 }
 
 # TODO - Add these to charm-tools helpers.
+_status_ () {
+    service $1 status | grep -q "start/running" \
+        && return 0 || return 1
+}
 _restart_ () {
     juju-log "Restarting $1"
-    service $1 restart || :
+    _status_ $1 && service $1 restart || service $1 start
 }
 _start_ () {
     juju-log "Starting $1"
-    service $1 start || :
+    _status_ $1 || service $1 start
 }
 _stop_ () {
     juju-log "Stopping $1"
-    service $1 stop || :
+    _status_ $1 && service $1 stop || :
 }
 
 # Hadoop Service Control Commands
@@ -243,7 +247,7 @@ stop_hadoop () {
     [ "$mapred_role" != "unconfigured" ] && \
         _stop_ hadoop-$mapred_role || :
 }
-stop_hadoop () { 
+start_hadoop () { 
     [ "$hdfs_role" != "unconfigured" ] && \
         _start_ hadoop-$hdfs_role || :
     [ "$mapred_role" != "unconfigured" ] && \
