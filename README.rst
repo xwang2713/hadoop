@@ -42,7 +42,7 @@ tasktrackers::
 
     juju deploy --repository . local:hadoop hadoop-master
     juju deploy --repository . local:hadoop hadoop-slavecluster
-    juju add-unit -n 2 hadoop-slavecluster-01
+    juju add-unit -n 2 hadoop-slavecluster
     juju add-relation hadoop-master:namenode hadoop-slavecluster:datanode
     juju add-relation hadoop-master:jobtracker hadoop-slavecluster:tasktracker
 

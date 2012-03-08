@@ -16,24 +16,24 @@ options:
       directly on upstream hadoop releases but are not fully built from
       source.
   hbase:
-    type: string
-    default: false
+    type: boolean
+    default: False
     description: |
-      Setting this configuration parameter to 'true' configures HDFS for
+      Setting this configuration parameter to 'True' configures HDFS for
       use with HBase including turning on 'append' mode which is not
       desirable in all deployment scenarios.
   webhdfs:
-    type: string
-    default: false
+    type: boolean
+    default: False
     description: |
       Hadoop includes a RESTful API over HTTP to HDFS.  Setting this flag
-      to true enables this part of the HDFS service.
+      to True enables this part of the HDFS service.
   pig:
-    type: string
-    default: false
+    type: boolean
+    default: False
     description: |
       To install Apache Pig on all service units alongside Hadoop set this
-      configuration to 'true'.
+      configuration to 'True'.
       .
       Apache Pig is a platform for analyzing large data sets that consists
       of a high-level language for expressing data analysis programs, coupled
