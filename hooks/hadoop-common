@@ -297,12 +297,15 @@ conditional_restart () {
         # Core hadoop config has changed - normal restart
         # of mapred and hdfs roles
         restart_hadoop
-    elif file_changed /etc/hadoop/conf.juju/hdfs-site.xml
+        return 0
+    fi
+    if file_changed /etc/hadoop/conf.juju/hdfs-site.xml
     then
         # Just restart HDFS role
         [ "$hdfs_role" != "unconfigured" ] && \
             _restart_ hadoop-$hdfs_role || :
-    elif file_changed /etc/hadoop/conf.juju/mapred-site.xml
+    fi
+    if file_changed /etc/hadoop/conf.juju/mapred-site.xml
     then
         # Just restart mapreduce role
         [ "$mapred_role" != "unconfigured" ] && \
