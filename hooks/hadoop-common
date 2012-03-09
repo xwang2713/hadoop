@@ -19,6 +19,26 @@ configure_hosts () {
     sed -i -e "s/^127.0.1.1\(.*$hostname.*\)/$private_address\1/" /etc/hosts
 }
 
+# Helpers to support conditional restarts based
+# on specific files changing
+checksum_snapshot () {
+    filename=$1
+    md5sum=$filename.md5
+    md5sum $filename > $filename.md5
+}
+
+file_changed () {
+    filename=$1
+    md5sum=$filename.md5
+    if [ -f $md5sum ]
+    then
+        md5sum -c $md5sum >/dev/null && return 1 || return 0
+    else
+        checksum_snapshot $filename
+        return 1
+    fi
+}
+
 configure_sources () {
     source=`config-get source`
     juju-log "Configuring hadoop using the Hadoop Ubuntu Team PPA..."
@@ -85,6 +105,20 @@ io.sort.mb
 mapred.job.tracker.handler.count
 tasktracker.http.threads
 "
+
+CONFIG_FILES="/etc/hadoop/conf.juju/hdfs-site.xml
+/etc/hadoop/conf.juju/core-site.xml
+/etc/hadoop/conf.juju/mapred-site.xml
+/etc/hadoop/conf.juju/hadoop-env.sh"
+
+snapshot_config () {
+    juju-log "Capturing checksum of all configuration files"
+    for fconfig in $CONFIG_FILES
+    do
+        checksum_snapshot $fconfig
+    done
+}
+
 configure_hadoop () {
     # Copy distribution configuration and then specialize
     if [ ! -d /etc/hadoop/conf.juju ]
@@ -252,6 +286,28 @@ start_hadoop () {
         _start_ hadoop-$hdfs_role || :
     [ "$mapred_role" != "unconfigured" ] && \
         _start_ hadoop-$mapred_role || :
+}
+
+# Restart services only if configuration files
+# have actually changed
+conditional_restart () {
+    if file_changed /etc/hadoop/conf.juju/core-site.xml ||
+       file_changed /etc/hadoop/conf.juju/hadoop-env.sh
+    then
+        # Core hadoop config has changed - normal restart
+        # of mapred and hdfs roles
+        restart_hadoop
+    elif file_changed /etc/hadoop/conf.juju/hdfs-site.xml
+    then
+        # Just restart HDFS role
+        [ "$hdfs_role" != "unconfigured" ] && \
+            _restart_ hadoop-$hdfs_role || :
+    elif file_changed /etc/hadoop/conf.juju/mapred-site.xml
+    then
+        # Just restart mapreduce role
+        [ "$mapred_role" != "unconfigured" ] && \
+            _restart_ hadoop-$mapred_role || :
+    fi
 }
 
 install_job () {
@@ -456,10 +512,13 @@ case $COMMAND in
     upgrade-charm|config-changed)
         install_optional_packages
         configure_hadoop
-        restart_hadoop
+        conditional_restart # only restart if pertinent config has changed!
         open_ports
         ;;
     *)
         juju-log "Command not recognised"
         ;;
 esac
+
+# Finally always capture a snapshot of all config files
+snapshot_config
