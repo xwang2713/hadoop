@@ -109,7 +109,8 @@ tasktracker.http.threads
 CONFIG_FILES="/etc/hadoop/conf.juju/hdfs-site.xml
 /etc/hadoop/conf.juju/core-site.xml
 /etc/hadoop/conf.juju/mapred-site.xml
-/etc/hadoop/conf.juju/hadoop-env.sh"
+/etc/hadoop/conf.juju/hadoop-env.sh
+/etc/hadoop/conf.juju/hadoop-metrics2.properties"
 
 snapshot_config () {
     juju-log "Capturing checksum of all configuration files"
@@ -117,6 +118,19 @@ snapshot_config () {
     do
         checksum_snapshot $fconfig
     done
+}
+
+configure_ganglia () {
+    cp /etc/hadoop/conf.juju/hadoop-metrics2.properties \
+        /etc/hadoop/conf.juju/hadoop-metrics2.properties.orig
+    cat templates/hadoop-metrics2.properties | \
+        sed -e "s/__MASTER__/`relation-get private-address`/g" > \
+        /etc/hadoop/conf.juju/hadoop-metrics2.properties
+}
+
+purge_ganglia () {
+    cp /etc/hadoop/conf.juju/hadoop-metrics2.properties.orig \
+        /etc/hadoop/conf.juju/hadoop-metrics2.properties
 }
 
 configure_hadoop () {
@@ -292,7 +306,8 @@ start_hadoop () {
 # have actually changed
 conditional_restart () {
     if file_changed /etc/hadoop/conf.juju/core-site.xml ||
-       file_changed /etc/hadoop/conf.juju/hadoop-env.sh
+       file_changed /etc/hadoop/conf.juju/hadoop-env.sh ||
+       file_changed /etc/hadoop/conf.juju/hadoop-metrics2.properties
     then
         # Core hadoop config has changed - normal restart
         # of mapred and hdfs roles
@@ -511,6 +526,17 @@ case $COMMAND in
                 exit 1
                 ;;
         esac
+        ;;
+    ganglia-relation-changed)
+        # Call generic ganglia install and configure script
+        # TODO supercede when subordinates land.
+        [ -x hooks/ganglia-common ] && hooks/ganglia-common || :
+        configure_ganglia
+        conditional_restart # only restart if pertinent config has changed!
+        ;;
+    ganglia-relation-departed|ganglia-relation-broken)
+        purge_ganglia
+        conditional_restart # only restart if pertinent config has changed!
         ;;
     upgrade-charm|config-changed)
         install_optional_packages
