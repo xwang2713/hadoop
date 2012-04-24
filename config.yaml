@@ -1,7 +1,7 @@
 options:
   source:
     type: string
-    default: dev
+    default: stable
     description: |
       Location and packages to install hadoop:
       .
@@ -12,7 +12,7 @@ options:
        * stable:  Install using the hadoop packages from
                   ppa:hadoop-ubuntu/stable.
       .
-      The packages provides in the hadoop-ubuntu team PPA's are based
+      The packages provided in the hadoop-ubuntu team PPA's are based
       directly on upstream hadoop releases but are not fully built from
       source.
   hbase:
