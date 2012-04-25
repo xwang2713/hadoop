@@ -40,8 +40,8 @@ In this configuration, the MapReduce jobtracker is deployed on the same
 service units as HDFS namenode and the HDFS datanodes also run MapReduce
 tasktrackers::
 
-    juju deploy --repository . local:hadoop hadoop-master
-    juju deploy --repository . local:hadoop hadoop-slavecluster
+    juju deploy hadoop hadoop-master
+    juju deploy hadoop hadoop-slavecluster
     juju add-unit -n 2 hadoop-slavecluster
     juju add-relation hadoop-master:namenode hadoop-slavecluster:datanode
     juju add-relation hadoop-master:jobtracker hadoop-slavecluster:tasktracker
@@ -52,13 +52,13 @@ Separate HDFS and MapReduce
 In this configuration the HDFS and MapReduce deployments operate on
 different service units as separate services::
 
-    juju deploy --repository . local:hadoop hdfs-namenode
-    juju deploy --repository . local:hadoop hdfs-datacluster
+    juju deploy hadoop hdfs-namenode
+    juju deploy hadoop hdfs-datacluster
     juju add-unit -n 2 hdfs-datacluster
     juju add-relation hdfs-namenode:namenode hdfs-datacluster:datanode
 
-    juju deploy --repository . local:hadoop mapred-jobtracker
-    juju deploy --repository . local:hadoop mapred-taskcluster
+    juju deploy hadoop mapred-jobtracker
+    juju deploy hadoop mapred-taskcluster
     juju add-unit -n 2 mapred-taskcluster
     juju add-relation mapred-jobtracker:mapred-namenode hdfs-namenode:namenode
     juju add-relation mapred-taskcluster:mapred-namenode hdfs-namenode:namenode    
@@ -85,8 +85,8 @@ the same configuration in this deployment scenario.
 
 The charm can then be use to deploy services with this configuration::
 
-    juju deploy --config config.yaml --repository . local:hadoop hdfs-namenode
-    juju deploy --config config.yaml --repository . local:hadoop hdfs-datacluster
+    juju deploy --config config.yaml hadoop hdfs-namenode
+    juju deploy --config config.yaml hadoop hdfs-datacluster
     juju add-unit -n 2 hdfs-datacluster
     juju add-relation hdfs-namenode:namenode hdfs-datacluster:datanode
 
@@ -107,16 +107,16 @@ The role of the service is determined at the point that the relation is added
 
 A single hdfs-master can support multiple slave service deployments::
 
-    juju deploy --repository . local:hadoop hdfs-datacluster-02
+    juju deploy hadoop hdfs-datacluster-02
     juju add-unit -n 2 hdfs-datacluster-02
     juju add-relation hdfs-namenode:namenode hdfs-datacluster-02:datanode
 
 This could potentially be used to perform charm upgrades on datanodes in
 sets::
 
-    juju upgrade-charm --repository . hdfs-datacluster
+    juju upgrade-charm hdfs-datacluster
     (go and make some tea whilst monitoring juju debug-log)
-    juju upgrade-charm --repository . hdfs-datacluster-02
+    juju upgrade-charm hdfs-datacluster-02
 
 Could be helpful to avoid outages (to be proven).
 
