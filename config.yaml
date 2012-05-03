@@ -142,3 +142,9 @@ options:
     description: |
       The number of worker threads that for the http server. This is used for
       map output fetching.
+  hadoop.dir.base:
+    type: string
+    default: /var/lib/hadoop
+    description: |
+      The directory under which all other hadoop data is stored.  Use this
+      to take advantage of extra storage that might be avaliable.

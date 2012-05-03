@@ -196,11 +196,23 @@ configure_hadoop () {
     dir=`dotdee --dir /etc/hadoop/conf.juju/core-site.xml`
     config_basic $dir
     rm -f $dir/1*-*
-    config_element "hadoop.tmp.dir" "/var/lib/hadoop/cache/\${user.name}" > \
+    config_element "hadoop.tmp.dir" "`config-get hadoop.dir.base`/cache/\${user.name}" > \
         $dir/10-hadoop.tmp.dir
     config_element "io.file.buffer.size" "`config-get io.file.buffer.size`" > \
         $dir/11-io.file.buffer.size
     dotdee --update /etc/hadoop/conf.juju/core-site.xml || true
+}
+
+configure_tmp_dir_perms() {
+    dir=`config-get hadoop.dir.base`
+    # Make sure the directory exists
+    mkdir -p $dir/cache/hadoop
+    # We don't want to do this recursively since we may be reinstalling, in which case
+    # users have their own cache/<username> directories which shouldn't be stolen
+    chown root:hadoop $dir $dir/cache $dir/cache/hadoop
+    # Ensure group write on this directory or we can start namenode/datanode
+    chmod 775 $dir/cache/hadoop
+    chmod 1777 $dir/cache
 }
 
 configure_role_relation () {
@@ -368,6 +380,7 @@ case $COMMAND in
         install_base_packages
         install_optional_packages
         configure_hadoop
+        configure_tmp_dir_perms        
         ;;
     jobtracker-relation-joined)
         case $mapred_role in
@@ -541,6 +554,7 @@ case $COMMAND in
     upgrade-charm|config-changed)
         install_optional_packages
         configure_hadoop
+        configure_tmp_dir_perms
         conditional_restart # only restart if pertinent config has changed!
         open_ports
         ;;
