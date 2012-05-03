@@ -159,7 +159,7 @@ configure_hadoop () {
     # Purge existing configuration
     rm -f $dir/1*-dfs.*
     config_element "dfs.name.dir" \
-        "/var/lib/hadoop/cache/hadoop/dfs/name" > \
+        "`config-get hadoop.dir.base`/cache/hadoop/dfs/name" > \
         $dir/10-dfs.name.dir
     config_element "dfs.namenode.handler.count" \
         "`config-get dfs.namenode.handler.count`" > \
