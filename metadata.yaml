@@ -1,5 +1,6 @@
 name: hadoop
 summary: Software platform for processing vast amounts of data
+maintainer: James Page <james.page@ubuntu.com>
 description: |
   Hadoop is a software platform that lets one easily write and
   run applications that process vast amounts of data.
