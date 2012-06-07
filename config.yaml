@@ -149,5 +149,6 @@ options:
       The directory under which all other hadoop data is stored.  Use this
       to take advantage of extra storage that might be avaliable.
       .
-      Don't change this on a running hadoop deployment - you will lose all
-      of your data.
+      You can change this in a running deployment but all existing data in
+      HDFS will be inaccessible; you can of course switch it back if you
+      do this by mistake.
