@@ -22,6 +22,7 @@ description: |
   multiple replicas of data blocks for reliability, placing them on compute
   nodes around the cluster. MapReduce can then process the data where it is
   located.
+categories: ["applications"]
 provides:
   namenode:
     interface: dfs
