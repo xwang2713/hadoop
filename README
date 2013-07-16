@@ -1,5 +1,4 @@
-Overview
---------
+## Overview
 
 The Apache Hadoop software library is a framework that allows for the
 distributed processing of large data sets across clusters of computers
@@ -14,40 +13,38 @@ which may be prone to failures.
 
 Hadoop consists of the following two core components:
 
-* Hadoop Distributed File System (HDFS™) is the primary storage system
+- Hadoop Distributed File System (HDFS™) is the primary storage system
   used by Hadoop applications. HDFS creates multiple replicas of data
   blocks and distributes them on compute nodes throughout a cluster to
   enable reliable, extremely rapid computations.
 
-* Hadoop MapReduce is a programming model and software framework for
+- Hadoop MapReduce is a programming model and software framework for
   writing applications that rapidly process vast amounts of data in
   parallel on large clusters of compute nodes.
 
-Usage
------
+## Usage
+
 
 This charm supports the following Hadoop roles:
 
-* HDFS: namenode, secondarynamenode and datanode
-* MapReduce: jobtracker, tasktracker
+- HDFS: namenode, secondarynamenode and datanode
+- MapReduce: jobtracker, tasktracker
 
 This supports deployments of Hadoop in a number of configurations.
 
-Combined HDFS and MapReduce
-+++++++++++++++++++++++++++
+### Combined HDFS and MapReduce
 
 In this configuration, the MapReduce jobtracker is deployed on the same
 service units as HDFS namenode and the HDFS datanodes also run MapReduce
 tasktrackers::
-
+    
     juju deploy hadoop hadoop-master
     juju deploy hadoop hadoop-slavecluster
     juju add-unit -n 2 hadoop-slavecluster
     juju add-relation hadoop-master:namenode hadoop-slavecluster:datanode
     juju add-relation hadoop-master:jobtracker hadoop-slavecluster:tasktracker
 
-Separate HDFS and MapReduce
-+++++++++++++++++++++++++++
+### Separate HDFS and MapReduce
 
 In this configuration the HDFS and MapReduce deployments operate on
 different service units as separate services::
@@ -69,8 +66,7 @@ better support this type of deployment.  This would allow mapreduce services
 to be deployed onto machines with more processing power and hdfs services
 to be deployed onto machines with larger storage.
 
-HDFS with HBase
-+++++++++++++++
+## HDFS with HBase
 
 This charm also supports deployment of HBase; HBase requires that append mode
 is enabled in DFS - this can be set by providing a config.yaml file::
@@ -98,8 +94,7 @@ You can then associate a hdfs service deployment with a hbase service deployment
 
 See the hbase charm for more details on deploying HBase.
 
-Words of Caution
-----------------
+## Words of Caution
 
 Note that removing the relation between namenode and datanode is destructive!
 The role of the service is determined at the point that the relation is added
@@ -115,8 +110,9 @@ This could potentially be used to perform charm upgrades on datanodes in
 sets::
 
     juju upgrade-charm hdfs-datacluster
-    (go and make some tea whilst monitoring juju debug-log)
+
+Go and make some tea whilst monitoring juju debug-log)
+    
     juju upgrade-charm hdfs-datacluster-02
 
 Could be helpful to avoid outages (to be proven).
-
