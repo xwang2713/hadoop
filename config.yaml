@@ -66,29 +66,29 @@ options:
       .
       If you are also mixing MapReduce and DFS roles on the same units you need to
       take this into account as well (see README for more details).
-# Expert options See http://wiki.apache.org/hadoop/FAQ#How_well_does_Hadoop_scale.3F 
+# Expert options See http://wiki.apache.org/hadoop/FAQ#How_well_does_Hadoop_scale.3F
 # for more details
-  dfs.namenode.handler.count:
+  dfs_namenode_handler_count:
     type: int
     default: 10
     description: |
       The number of server threads for the namenode.  Increase this in larger
       deployments to ensure the namenode can cope with the number of datanodes
       that it has to deal with.
-  dfs.block.size:
+  dfs_block_size:
     type: int
     default: 67108864
     description: |
-      The default block size for new files (default to 64MB).  Increase this in 
+      The default block size for new files (default to 64MB).  Increase this in
       larger deployments for better large data set performance.
-  io.file.buffer.size:
+  io_file_buffer_size:
     type: int
     default: 4096
     description: |
       The size of buffer for use in sequence files. The size of this buffer should
       probably be a multiple of hardware page size (4096 on Intel x86), and it
       determines how much data is buffered during read and write operations.
-  dfs.datanode.max.xcievers:
+  dfs_datanode_max_xcievers:
     type: int
     default: 4096
     description: |
@@ -97,13 +97,13 @@ options:
       An Hadoop HDFS datanode has an upper bound on the number of files that it
       will serve at any one time. This defaults to 256 (which is low) in hadoop
       1.x - however this charm increases that to 4096.
-  mapred.reduce.parallel.copies:
+  mapred_reduce_parallel_copies:
     type: int
     default: 5
     description: |
       The default number of parallel transfers run by reduce during the
       copy(shuffle) phase.
-  mapred.child.java.opts:
+  mapred_child_java_opts:
     type: string
     default: -Xmx200m
     description: |
@@ -117,32 +117,32 @@ options:
       .
       The configuration variable mapred.child.ulimit can be used to control
       the maximum virtual memory of the child processes.
-  io.sort.factor:
+  io_sort_factor:
     type: int
     default: 10
     description: |
       The number of streams to merge at once while sorting files. This
       determines the number of open file handles.
-  io.sort.mb:
+  io_sort_mb:
     type: int
     default: 100
     description: |
       The total amount of buffer memory to use while sorting files, in
       megabytes. By default, gives each merge stream 1MB, which should minimize
       seeks.
-  mapred.job.tracker.handler.count:
+  mapred_job_tracker_handler_count:
     type: int
     default: 10
     description: |
       The number of server threads for the JobTracker. This should be roughly
       4% of the number of tasktracker nodes.
-  tasktracker.http.threads:
+  tasktracker_http_threads:
     type: int
     default: 40
     description: |
       The number of worker threads that for the http server. This is used for
       map output fetching.
-  hadoop.dir.base:
+  hadoop_dir_base:
     type: string
     default: /var/lib/hadoop
     description: |
