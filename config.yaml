@@ -66,7 +66,7 @@ options:
       .
       If you are also mixing MapReduce and DFS roles on the same units you need to
       take this into account as well (see README for more details).
-# Expert options See http://wiki.apache.org/hadoop/FAQ#How_well_does_Hadoop_scale.3F 
+# Expert options See http://wiki.apache.org/hadoop/FAQ#How_well_does_Hadoop_scale.3F
 # for more details
   dfs_namenode_handler_count:
     type: int
@@ -79,7 +79,7 @@ options:
     type: int
     default: 67108864
     description: |
-      The default block size for new files (default to 64MB).  Increase this in 
+      The default block size for new files (default to 64MB).  Increase this in
       larger deployments for better large data set performance.
   io_file_buffer_size:
     type: int

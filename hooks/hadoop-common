@@ -4,7 +4,7 @@ set -e
 
 configure_hosts () {
     private_address=`unit-get private-address`
-    # This is a horrible hack to ensure that 
+    # This is a horrible hack to ensure that
     # Java can resolve the hostname of the server to its
     # real IP address.
 
@@ -76,7 +76,7 @@ open_ports () {
     case $hdfs_role in
         namenode)
             open-port 8020
-            open-port 50070 
+            open-port 50070
             ;;
         datanode)
             open-port 50010
@@ -98,13 +98,12 @@ open_ports () {
     esac
 }
 
-MAPRED_CONFIG="mapred.reduce.parallel.copies
-mapred.child.java.opts
-io.sort.factor
-io.sort.mb
-mapred.job.tracker.handler.count
-tasktracker.http.threads
-"
+MAPRED_CONFIG="mapred_reduce_parallel_copies
+mapred_child_java_opts
+io_sort_factor
+io_sort_mb
+mapred_job_tracker_handler_count
+tasktracker_http_threads"
 
 CONFIG_FILES="/etc/hadoop/conf.juju/hdfs-site.xml
 /etc/hadoop/conf.juju/core-site.xml
@@ -143,9 +142,9 @@ configure_hadoop () {
         cp /dev/null /etc/hadoop/conf.juju/hdfs-site.xml
         cp /dev/null /etc/hadoop/conf.juju/core-site.xml
         cp /dev/null /etc/hadoop/conf.juju/mapred-site.xml
-        dotdee --setup /etc/hadoop/conf.juju/hdfs-site.xml 
+        dotdee --setup /etc/hadoop/conf.juju/hdfs-site.xml
         dotdee --setup /etc/hadoop/conf.juju/core-site.xml
-        dotdee --setup /etc/hadoop/conf.juju/mapred-site.xml 
+        dotdee --setup /etc/hadoop/conf.juju/mapred-site.xml
         dotdee --setup /etc/hadoop/conf.juju/hadoop-env.sh
     fi
     # Configure Heap Size
@@ -187,8 +186,7 @@ configure_hadoop () {
     counter=10
     for element in $MAPRED_CONFIG
     do
-	cname=`python -c "import sys; sys.stdout.write(sys.argv[1].replace('.', '_'))" $element`
-        config_element "$element" "`config-get $cname`" > \
+        config_element "${element//_/.}" "`config-get $element`" > \
             $dir/20-$counter-$element
         counter=`expr $counter + 1`
     done
@@ -262,7 +260,7 @@ configure_role_relation () {
 
 install_packages () {
     case $1 in
-        namenode|datanode|secondarynamenode|jobtracker|tasktracker) 
+        namenode|datanode|secondarynamenode|jobtracker|tasktracker)
             juju-log "Installing extra packages for $1"
             apt-get -y install hadoop-$1
             ;;
@@ -296,19 +294,19 @@ _stop_ () {
 }
 
 # Hadoop Service Control Commands
-restart_hadoop () { 
+restart_hadoop () {
     [ "$hdfs_role" != "unconfigured" ] && \
         _restart_ hadoop-$hdfs_role || :
     [ "$mapred_role" != "unconfigured" ] && \
         _restart_ hadoop-$mapred_role || :
 }
-stop_hadoop () { 
+stop_hadoop () {
     [ "$hdfs_role" != "unconfigured" ] && \
         _stop_ hadoop-$hdfs_role || :
     [ "$mapred_role" != "unconfigured" ] && \
         _stop_ hadoop-$mapred_role || :
 }
-start_hadoop () { 
+start_hadoop () {
     [ "$hdfs_role" != "unconfigured" ] && \
         _start_ hadoop-$hdfs_role || :
     [ "$mapred_role" != "unconfigured" ] && \
@@ -381,7 +379,7 @@ case $COMMAND in
         install_base_packages
         install_optional_packages
         configure_hadoop
-        configure_tmp_dir_perms        
+        configure_tmp_dir_perms
         ;;
     jobtracker-relation-joined)
         case $mapred_role in
@@ -455,7 +453,7 @@ case $COMMAND in
         ;;
     namenode-relation-joined)
         case $hdfs_role in
-            unconfigured)             
+            unconfigured)
                 juju-log "Configuring this unit as a namenode"
                 hdfs_role="namenode"
                 configure_role_relation $hdfs_role
@@ -514,7 +512,7 @@ case $COMMAND in
         ;;
    datanode-relation-changed)
         case $hdfs_role in
-            unconfigured) 
+            unconfigured)
                 ready=`relation-get ready`
                 if [ -z "$ready" ]
                 then
