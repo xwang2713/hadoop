@@ -159,16 +159,16 @@ configure_hadoop () {
     # Purge existing configuration
     rm -f $dir/1*-dfs.*
     config_element "dfs.name.dir" \
-        "`config-get hadoop.dir.base`/cache/hadoop/dfs/name" > \
+        "`config-get hadoop_dir_base`/cache/hadoop/dfs/name" > \
         $dir/10-dfs.name.dir
     config_element "dfs.namenode.handler.count" \
-        "`config-get dfs.namenode.handler.count`" > \
+        "`config-get dfs_namenode_handler_count`" > \
         $dir/11-dfs.namenode.handler.count
     config_element "dfs.block.size" i\
-        "`config-get dfs.block.size`" > \
+        "`config-get dfs_block_size`" > \
         $dir/12-dfs.block.size
     config_element "dfs.datanode.max.xcievers" \
-        "`config-get dfs.datanode.max.xcievers`" > \
+        "`config-get dfs_datanode_max_xcievers`" > \
         $dir/13-dfs.datanode.max.xcievers
     [ "`config-get hbase`" = "True" ] && \
         config_element "dfs.support.append" "true" > \
@@ -187,7 +187,8 @@ configure_hadoop () {
     counter=10
     for element in $MAPRED_CONFIG
     do
-        config_element "$element" "`config-get $element`" > \
+	cname=`python -c "import sys; sys.stdout.write(sys.argv[1].replace('.', '_'))" $element`
+        config_element "$element" "`config-get $cname`" > \
             $dir/20-$counter-$element
         counter=`expr $counter + 1`
     done
@@ -196,15 +197,15 @@ configure_hadoop () {
     dir=`dotdee --dir /etc/hadoop/conf.juju/core-site.xml`
     config_basic $dir
     rm -f $dir/1*-*
-    config_element "hadoop.tmp.dir" "`config-get hadoop.dir.base`/cache/\${user.name}" > \
+    config_element "hadoop.tmp.dir" "`config-get hadoop_dir_base`/cache/\${user.name}" > \
         $dir/10-hadoop.tmp.dir
-    config_element "io.file.buffer.size" "`config-get io.file.buffer.size`" > \
+    config_element "io.file.buffer.size" "`config-get io_file_buffer_size`" > \
         $dir/11-io.file.buffer.size
     dotdee --update /etc/hadoop/conf.juju/core-site.xml || true
 }
 
 configure_tmp_dir_perms() {
-    dir=`config-get hadoop.dir.base`
+    dir=`config-get hadoop_dir_base`
     # Make sure the directory exists
     mkdir -p $dir/cache/hadoop
     # We don't want to do this recursively since we may be reinstalling, in which case
